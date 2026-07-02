@@ -9,10 +9,10 @@
       color-scheme: dark;
       --bg-1: #070b14;
       --bg-2: #101a2e;
-      --gold-1: #fff5b7;
-      --gold-2: #ffd45f;
-      --gold-3: #e89d1c;
-      --gold-4: #8d5410;
+      --gold-1: #fbfbf4;
+      --gold-2: #e7dfc7;
+      --gold-3: #a9a08c;
+      --gold-4: #686050;
       --accent: #7ce7ff;
       --tilt-x: -14deg;
       --tilt-y: 28deg;
@@ -119,12 +119,13 @@
     .stage {
       position: relative;
       width: 260px;
-      height: 300px;
+      height: 270px;
       display: grid;
       place-items: center;
-      margin: auto 0 18px;
+      margin: 18px 0 0;
       perspective: 900px;
       z-index: 2;
+      transform: translateY(-18px);
     }
 
     .halo {
@@ -132,7 +133,7 @@
       width: 226px;
       height: 226px;
       border-radius: 999px;
-      background: radial-gradient(circle, rgba(255, 212, 95, .25), rgba(255, 212, 95, 0) 66%);
+      background: radial-gradient(circle, rgba(231, 223, 199, .26), rgba(231, 223, 199, 0) 66%);
       filter: blur(4px);
       animation: breathe 2.8s ease-in-out infinite;
     }
@@ -174,43 +175,62 @@
       backface-visibility: hidden;
       overflow: hidden;
       background:
-        radial-gradient(circle at 31% 24%, var(--gold-1), transparent 26%),
-        radial-gradient(circle at 64% 70%, rgba(141,84,16,.42), transparent 36%),
+        radial-gradient(circle at 31% 24%, var(--gold-1), transparent 25%),
+        radial-gradient(circle at 66% 72%, rgba(76,72,64,.28), transparent 38%),
         linear-gradient(135deg, var(--gold-2), var(--gold-3));
       box-shadow:
-        inset 0 0 0 7px rgba(255,255,255,.16),
-        inset 0 0 0 14px rgba(141,84,16,.13),
-        inset -16px -22px 28px rgba(91,48,8,.28),
-        inset 14px 14px 24px rgba(255,255,255,.22);
+        inset 0 0 0 5px rgba(255,255,255,.22),
+        inset 0 0 0 12px rgba(93,88,77,.22),
+        inset 0 0 0 17px rgba(255,255,255,.10),
+        inset -16px -22px 28px rgba(39,35,29,.22),
+        inset 14px 14px 24px rgba(255,255,255,.34);
+    }
+
+    .face::after, .back::after {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      border: 1px solid rgba(72, 67, 58, .34);
+      pointer-events: none;
     }
 
     .back { transform: rotateY(180deg); }
 
-    .edge {
-      position: absolute;
-      left: 50%; top: 50%;
-      width: 18px;
-      height: 142px;
-      margin-left: -9px;
-      margin-top: -71px;
-      border-radius: 8px;
-      background: linear-gradient(90deg, var(--gold-4), #f4bd45 45%, #6f3e0d);
-      transform: rotateY(90deg) rotateX(var(--a)) translateZ(71px);
-      box-shadow: inset 0 0 8px rgba(0,0,0,.25);
-    }
-
     .coin-mark {
-      width: 78px;
-      height: 78px;
-      border-radius: 50%;
+      position: relative;
+      z-index: 1;
+      width: 94px;
+      height: 94px;
       display: grid;
       place-items: center;
+      color: rgba(53, 49, 42, .78);
+      text-shadow: 0 1px rgba(255,255,255,.42);
+    }
+
+    .ruble-mark {
+      align-content: center;
+      gap: 2px;
       font-weight: 850;
-      font-size: 48px;
-      color: rgba(92, 54, 8, .78);
-      text-shadow: 0 1px rgba(255,255,255,.35);
-      border: 3px solid rgba(115,64,9,.38);
-      background: rgba(255,255,255,.10);
+      line-height: .9;
+      letter-spacing: -.05em;
+    }
+
+    .ruble-mark .num {
+      font-size: 58px;
+    }
+
+    .ruble-mark .label {
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .eagle-mark svg {
+      width: 82px;
+      height: 82px;
+      fill: rgba(53, 49, 42, .72);
+      filter: drop-shadow(0 1px rgba(255,255,255,.32));
     }
 
     .spark {
@@ -218,8 +238,8 @@
       width: 7px;
       height: 7px;
       border-radius: 50%;
-      background: #fff5b7;
-      box-shadow: 0 0 18px #ffd45f;
+      background: #fbfbf4;
+      box-shadow: 0 0 18px #e7dfc7;
       opacity: 0;
       animation: sparkle 2.6s ease-in-out infinite;
     }
@@ -293,6 +313,12 @@
     @media (prefers-reduced-motion: reduce) {
       .coin, .halo, .orbit, .spark, .dot { animation-duration: 6s; }
     }
+
+    @media (max-height: 720px) {
+      .status-bar { margin-bottom: 26px; }
+      .stage { height: 236px; transform: translateY(-12px); }
+      .subtitle { margin-top: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -316,14 +342,24 @@
 
         <div class="coin-wrap" id="coinWrap">
           <div class="coin" id="coin">
-            <div class="edge" style="--a: 0deg"></div>
-            <div class="edge" style="--a: 30deg"></div>
-            <div class="edge" style="--a: 60deg"></div>
-            <div class="edge" style="--a: 90deg"></div>
-            <div class="edge" style="--a: 120deg"></div>
-            <div class="edge" style="--a: 150deg"></div>
-            <div class="face"><div class="coin-mark">₽</div></div>
-            <div class="back"><div class="coin-mark">✓</div></div>
+            <div class="face">
+              <div class="coin-mark ruble-mark">
+                <span class="num">1</span>
+                <span class="label">рубль</span>
+              </div>
+            </div>
+            <div class="back">
+              <div class="coin-mark eagle-mark" aria-label="Двуглавый орёл">
+                <svg viewBox="0 0 120 120" role="img" aria-hidden="true">
+                  <path d="M60 18c4 0 7 3 7 7 0 2-1 4-2 5 7-4 15-5 22-2-6 3-10 7-12 13 7-2 15 1 20 7-9-1-16 2-21 9 7 0 13 4 16 10-9-2-16-1-22 4 4 4 8 8 13 11-8 1-15-1-21-6-6 5-13 7-21 6 5-3 9-7 13-11-6-5-13-6-22-4 3-6 9-10 16-10-5-7-12-10-21-9 5-6 13-9 20-7-2-6-6-10-12-13 7-3 15-2 22 2-1-1-2-3-2-5 0-4 3-7 7-7Z" />
+                  <path d="M52 53h16v35l10 10H42l10-10V53Z" />
+                  <path d="M43 91h34v8H43z" />
+                  <circle cx="48" cy="38" r="3" />
+                  <circle cx="72" cy="38" r="3" />
+                  <path d="M57 24l3-8 3 8h8l-6 5 3 8-8-5-8 5 3-8-6-5h8Z" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       </div>
