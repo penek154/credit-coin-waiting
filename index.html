@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Ожидание одобрения кредита — интерактивная монетка</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-1: #070b14;
+      --bg-2: #101a2e;
+      --gold-1: #fff5b7;
+      --gold-2: #ffd45f;
+      --gold-3: #e89d1c;
+      --gold-4: #8d5410;
+      --accent: #7ce7ff;
+      --tilt-x: -14deg;
+      --tilt-y: 28deg;
+      --spin-speed: 1.45s;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 50% 34%, rgba(124, 231, 255, .14), transparent 27rem),
+        radial-gradient(circle at 18% 14%, rgba(255, 212, 95, .10), transparent 18rem),
+        linear-gradient(145deg, var(--bg-1), var(--bg-2) 52%, #06080e);
+      color: #f4f8ff;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: radial-gradient(circle at center, black, transparent 78%);
+    }
+
+    .phone {
+      width: min(390px, calc(100vw - 28px));
+      min-height: min(812px, calc(100vh - 28px));
+      border-radius: 46px;
+      padding: 18px;
+      position: relative;
+      background: linear-gradient(155deg, rgba(255,255,255,.16), rgba(255,255,255,.035));
+      box-shadow:
+        0 34px 90px rgba(0, 0, 0, .55),
+        inset 0 0 0 1px rgba(255,255,255,.13);
+    }
+
+    .screen {
+      position: relative;
+      min-height: calc(min(812px, calc(100vh - 28px)) - 36px);
+      border-radius: 34px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 34px 26px 28px;
+      background:
+        radial-gradient(circle at 50% 28%, rgba(124,231,255,.13), transparent 15rem),
+        radial-gradient(circle at 50% 54%, rgba(255,212,95,.13), transparent 12rem),
+        linear-gradient(180deg, #0d1324, #080b13 70%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    .status-bar {
+      width: 120px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.75);
+      opacity: .55;
+      margin-bottom: 42px;
+    }
+
+    .copy {
+      text-align: center;
+      max-width: 300px;
+      z-index: 3;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(174, 229, 255, .78);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 7vw, 34px);
+      line-height: 1.04;
+      letter-spacing: -.035em;
+    }
+
+    .subtitle {
+      margin: 14px 0 0;
+      font-size: 15px;
+      line-height: 1.45;
+      color: rgba(230, 238, 255, .72);
+    }
+
+    .stage {
+      position: relative;
+      width: 260px;
+      height: 300px;
+      display: grid;
+      place-items: center;
+      margin: auto 0 18px;
+      perspective: 900px;
+      z-index: 2;
+    }
+
+    .halo {
+      position: absolute;
+      width: 226px;
+      height: 226px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(255, 212, 95, .25), rgba(255, 212, 95, 0) 66%);
+      filter: blur(4px);
+      animation: breathe 2.8s ease-in-out infinite;
+    }
+
+    .orbit {
+      position: absolute;
+      width: 224px;
+      height: 224px;
+      border-radius: 50%;
+      border: 1px solid rgba(124, 231, 255, .20);
+      transform: rotateX(72deg) rotateZ(-14deg);
+      animation: orbitGlow 3.8s linear infinite;
+    }
+
+    .coin-wrap {
+      width: 142px;
+      height: 142px;
+      position: relative;
+      transform-style: preserve-3d;
+      transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+      filter: drop-shadow(0 26px 34px rgba(0,0,0,.46));
+      transition: transform .34s cubic-bezier(.18, .9, .2, 1.2);
+    }
+
+    .coin {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      animation: spin var(--spin-speed) linear infinite;
+      transition: animation-duration .25s ease;
+    }
+
+    .face, .back {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      backface-visibility: hidden;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 31% 24%, var(--gold-1), transparent 26%),
+        radial-gradient(circle at 64% 70%, rgba(141,84,16,.42), transparent 36%),
+        linear-gradient(135deg, var(--gold-2), var(--gold-3));
+      box-shadow:
+        inset 0 0 0 7px rgba(255,255,255,.16),
+        inset 0 0 0 14px rgba(141,84,16,.13),
+        inset -16px -22px 28px rgba(91,48,8,.28),
+        inset 14px 14px 24px rgba(255,255,255,.22);
+    }
+
+    .back { transform: rotateY(180deg); }
+
+    .edge {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 18px;
+      height: 142px;
+      margin-left: -9px;
+      margin-top: -71px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--gold-4), #f4bd45 45%, #6f3e0d);
+      transform: rotateY(90deg) rotateX(var(--a)) translateZ(71px);
+      box-shadow: inset 0 0 8px rgba(0,0,0,.25);
+    }
+
+    .coin-mark {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 850;
+      font-size: 48px;
+      color: rgba(92, 54, 8, .78);
+      text-shadow: 0 1px rgba(255,255,255,.35);
+      border: 3px solid rgba(115,64,9,.38);
+      background: rgba(255,255,255,.10);
+    }
+
+    .spark {
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #fff5b7;
+      box-shadow: 0 0 18px #ffd45f;
+      opacity: 0;
+      animation: sparkle 2.6s ease-in-out infinite;
+    }
+    .spark:nth-child(1) { left: 26px; top: 82px; animation-delay: .15s; }
+    .spark:nth-child(2) { right: 38px; top: 54px; animation-delay: .9s; transform: scale(.75); }
+    .spark:nth-child(3) { right: 56px; bottom: 60px; animation-delay: 1.55s; transform: scale(.55); }
+
+    .hint {
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: rgba(244,248,255,.82);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(14px);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px var(--accent);
+      animation: pulse .9s ease-in-out infinite alternate;
+    }
+
+    .tap-ripple {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 1px solid rgba(124,231,255,.7);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      animation: ripple .62s ease-out forwards;
+      z-index: 6;
+    }
+
+    @keyframes spin {
+      to { transform: rotateY(360deg); }
+    }
+
+    @keyframes breathe {
+      50% { transform: scale(1.08); opacity: .72; }
+    }
+
+    @keyframes orbitGlow {
+      50% { border-color: rgba(255, 212, 95, .24); }
+      to { rotate: 360deg; }
+    }
+
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; translate: 0 8px; }
+      35% { opacity: 1; translate: 0 0; }
+      70% { opacity: 0; translate: 0 -13px; }
+    }
+
+    @keyframes pulse {
+      to { transform: scale(1.4); opacity: .55; }
+    }
+
+    @keyframes ripple {
+      to { width: 160px; height: 160px; opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .coin, .halo, .orbit, .spark, .dot { animation-duration: 6s; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <main class="phone" id="phone" aria-label="Интерактивный макет ожидания одобрения кредита">
+    <section class="screen">
+      <div class="status-bar"></div>
+
+      <div class="copy">
+        <p class="eyebrow">Заявка отправлена</p>
+        <h1>Ожидаем одобрения кредита</h1>
+        <p class="subtitle">Проверяем данные. Обычно это занимает меньше минуты.</p>
+      </div>
+
+      <div class="stage" aria-hidden="true">
+        <div class="halo"></div>
+        <div class="orbit"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+
+        <div class="coin-wrap" id="coinWrap">
+          <div class="coin" id="coin">
+            <div class="edge" style="--a: 0deg"></div>
+            <div class="edge" style="--a: 30deg"></div>
+            <div class="edge" style="--a: 60deg"></div>
+            <div class="edge" style="--a: 90deg"></div>
+            <div class="edge" style="--a: 120deg"></div>
+            <div class="edge" style="--a: 150deg"></div>
+            <div class="face"><div class="coin-mark">₽</div></div>
+            <div class="back"><div class="coin-mark">✓</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint"><span class="dot"></span>Нажмите на экран — монетка изменит вращение</div>
+    </section>
+  </main>
+
+  <script>
+    const phone = document.querySelector('#phone');
+    const coinWrap = document.querySelector('#coinWrap');
+    const coin = document.querySelector('#coin');
+
+    let mode = 0;
+    const modes = [
+      { x: -14, y: 28, speed: 1.45 },
+      { x: 24, y: -34, speed: .88 },
+      { x: -36, y: 58, speed: 1.05 },
+      { x: 8, y: 76, speed: .68 },
+      { x: -8, y: -72, speed: 1.85 }
+    ];
+
+    function setMode(next) {
+      const m = modes[next % modes.length];
+      coinWrap.style.setProperty('--tilt-x', `${m.x}deg`);
+      coinWrap.style.setProperty('--tilt-y', `${m.y}deg`);
+      coin.style.setProperty('--spin-speed', `${m.speed}s`);
+    }
+
+    function ripple(x, y) {
+      const r = document.createElement('span');
+      r.className = 'tap-ripple';
+      const rect = phone.getBoundingClientRect();
+      r.style.left = `${x - rect.left}px`;
+      r.style.top = `${y - rect.top}px`;
+      phone.appendChild(r);
+      r.addEventListener('animationend', () => r.remove());
+    }
+
+    phone.addEventListener('pointerdown', (event) => {
+      mode += 1;
+      setMode(mode);
+      ripple(event.clientX, event.clientY);
+    });
+  </script>
+</body>
+</html>
