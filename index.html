@@ -16,7 +16,8 @@
       --accent: #7ce7ff;
       --tilt-x: -14deg;
       --tilt-y: 28deg;
-      --spin-speed: 1.45s;
+      --coin-rot-x: 0deg;
+      --coin-rot-y: 0deg;
     }
 
     * { box-sizing: border-box; }
@@ -162,8 +163,8 @@
       position: absolute;
       inset: 0;
       transform-style: preserve-3d;
-      animation: spin var(--spin-speed) linear infinite;
-      transition: animation-duration .25s ease;
+      transform: rotateX(var(--coin-rot-x)) rotateY(var(--coin-rot-y));
+      will-change: transform;
     }
 
     .face, .back {
@@ -283,10 +284,6 @@
       z-index: 6;
     }
 
-    @keyframes spin {
-      to { transform: rotateY(360deg); }
-    }
-
     @keyframes breathe {
       50% { transform: scale(1.08); opacity: .72; }
     }
@@ -311,7 +308,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .coin, .halo, .orbit, .spark, .dot { animation-duration: 6s; }
+      .halo, .orbit, .spark, .dot { animation-duration: 6s; }
     }
 
     @media (max-height: 720px) {
@@ -364,7 +361,7 @@
         </div>
       </div>
 
-      <div class="hint"><span class="dot"></span>Нажмите на экран — монетка изменит вращение</div>
+      <div class="hint"><span class="dot"></span>Тапайте по экрану — сила и ритм задают вращение</div>
     </section>
   </main>
 
@@ -373,20 +370,55 @@
     const coinWrap = document.querySelector('#coinWrap');
     const coin = document.querySelector('#coin');
 
-    let mode = 0;
-    const modes = [
-      { x: -14, y: 28, speed: 1.45 },
-      { x: 24, y: -34, speed: .88 },
-      { x: -36, y: 58, speed: 1.05 },
-      { x: 8, y: 76, speed: .68 },
-      { x: -8, y: -72, speed: 1.85 }
-    ];
+    const state = {
+      rotX: 0,
+      rotY: 0,
+      velX: 0,
+      velY: 0,
+      lastFrame: performance.now(),
+      lastTap: null,
+      raf: null
+    };
 
-    function setMode(next) {
-      const m = modes[next % modes.length];
-      coinWrap.style.setProperty('--tilt-x', `${m.x}deg`);
-      coinWrap.style.setProperty('--tilt-y', `${m.y}deg`);
-      coin.style.setProperty('--spin-speed', `${m.speed}s`);
+    const friction = 0.942;
+    const stopThreshold = 0.018;
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function render() {
+      coin.style.setProperty('--coin-rot-x', `${state.rotX}deg`);
+      coin.style.setProperty('--coin-rot-y', `${state.rotY}deg`);
+    }
+
+    function tick(now) {
+      const dt = clamp((now - state.lastFrame) / 16.67, 0.45, 2.2);
+      state.lastFrame = now;
+
+      state.rotX += state.velX * dt;
+      state.rotY += state.velY * dt;
+
+      const damping = Math.pow(friction, dt);
+      state.velX *= damping;
+      state.velY *= damping;
+
+      render();
+
+      if (Math.abs(state.velX) > stopThreshold || Math.abs(state.velY) > stopThreshold) {
+        state.raf = requestAnimationFrame(tick);
+      } else {
+        state.velX = 0;
+        state.velY = 0;
+        state.raf = null;
+      }
+    }
+
+    function wakePhysics() {
+      if (!state.raf) {
+        state.lastFrame = performance.now();
+        state.raf = requestAnimationFrame(tick);
+      }
     }
 
     function ripple(x, y) {
@@ -399,11 +431,48 @@
       r.addEventListener('animationend', () => r.remove());
     }
 
-    phone.addEventListener('pointerdown', (event) => {
-      mode += 1;
-      setMode(mode);
+    function kick(event) {
+      const rect = phone.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const dx = (event.clientX - centerX) / (rect.width / 2);
+      const dy = (event.clientY - centerY) / (rect.height / 2);
+      const now = performance.now();
+
+      let cadenceBoost = 1;
+      let directionBoostX = 0;
+      let directionBoostY = 0;
+
+      if (state.lastTap) {
+        const interval = clamp(now - state.lastTap.t, 70, 900);
+        const moveX = event.clientX - state.lastTap.x;
+        const moveY = event.clientY - state.lastTap.y;
+        const distance = Math.hypot(moveX, moveY);
+
+        // Быстрые повторные тапы и резкие перемещения дают более сильный стартовый импульс.
+        cadenceBoost = clamp(1 + (520 - interval) / 230 + distance / 190, 0.75, 3.4);
+        directionBoostX = clamp(-moveY / interval * 28, -7, 7);
+        directionBoostY = clamp(moveX / interval * 28, -7, 7);
+      }
+
+      const pressure = event.pressure && event.pressure > 0 ? event.pressure : 0.55;
+      const tapSharpness = clamp(cadenceBoost * (0.85 + pressure), 0.7, 4.2);
+
+      state.velY += clamp((7.5 + Math.abs(dx) * 5.5) * tapSharpness + directionBoostY, -24, 24);
+      state.velX += clamp((-dy * 8.5) * tapSharpness + directionBoostX, -18, 18);
+
+      const visualTiltX = clamp(-14 - dy * 16, -36, 30);
+      const visualTiltY = clamp(28 + dx * 24, -52, 62);
+      coinWrap.style.setProperty('--tilt-x', `${visualTiltX}deg`);
+      coinWrap.style.setProperty('--tilt-y', `${visualTiltY}deg`);
+
+      state.lastTap = { x: event.clientX, y: event.clientY, t: now };
       ripple(event.clientX, event.clientY);
-    });
+      wakePhysics();
+    }
+
+    render();
+    phone.addEventListener('pointerdown', kick);
   </script>
 </body>
 </html>
